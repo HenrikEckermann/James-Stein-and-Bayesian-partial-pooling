@@ -89,9 +89,9 @@ For each of the 18 players in the data, our goal is to the best job possible to 
 
 > The first step in applying stein’s method is to determine the average of the averages. Obviously this grand average, which we give the symbol $\overline y$, must also lie between 0 and 1. The essential process in Stein’s method is the "shrinking" of all the individual averages toward this grand average. If a player’s hitting record is better than the grand average, then it must be reduced; if he is not hitting as well as the grand average, then his hitting record must be increased. The resulting shrunken value for each player we designate $z$. (p. 119)
 
-As such, the James-Stein estimator is
+As such, the James-Stein estimator is:
 
-<img src="pictures/JS_estimator.png" align="middle" />
+<img src="pictures/JS_estimator.png"/>
 
 And in the paper, $c = .212$. Let's get some of those values into the `baseball` data.
 
@@ -208,21 +208,13 @@ baseball %>%
   facet_wrap(~facet)
 ```
 
-The James-Stein estimator works because of its shrinkage. The shrinkage factor is $c$. In the first parts of the paper, Efron and Morris just told us $c = .212$. A little later in the paper, they give the formula for $c$. If you let $k$ be the number of means (i.e., the number of clusters), then 
+The James-Stein estimator works because of its shrinkage. The shrinkage factor is $c$. In the first parts of the paper, Efron and Morris just told us $c = .212$. A little later in the paper, they give the formula for $c$. If you let $k$ be the number of means (i.e., the number of clusters), then:
 
-<center>
-
-![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/shrink_factor.png)
-
-</center>
+<img src="pictures/shrink_factor.png"/>
 
 The difficulty of that formula is we don't know the value for $\sigma^2$. It's not the simple variance of $y$ (i.e., `var(y)`). An [answer to this stackexchange question](https://stats.stackexchange.com/questions/5727/james-stein-estimator-how-did-efron-and-morris-calculate-sigma2-in-shrinkag) appears to have uncovered the method Efron and Morris used in the paper. I'll reproduce it in detail.
 
-<center>
-
-![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/answer.png)
-
-</center>
+<img src="pictures/answer.png"/>
 
 Thus, we can compute `sigma_squared` like so:
 
@@ -261,13 +253,9 @@ fit_y <-
       prior(normal(0, 2), class = b))
 ```
 
-If you were curious, that model followed the statistical formula
+If you were curious, that model followed the statistical formula:
 
-<center>
-
-![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/fit_y.png)
-
-</center>
+<img src="pictures/fit_y.png"/>
 
 For our analogue to the James-Stein estimate $z$, we’ll fit the multilevel version of the last model. While each player still gets his own estimate, those estimates are now partially-pooled toward the grand mean.
 
@@ -281,11 +269,7 @@ fit_z <-
 
 And that model followed the statistical formula
 
-<center>
-
-![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/fit_z.png)
-
-</center>
+<img src="pictures/fit_z.png"/>
 
 Here are the model summaries.
 

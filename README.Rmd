@@ -16,7 +16,7 @@ The James-Stein estimator leads to better predictions than simple means. Though 
 
 ## James-Stein can help us understand multilevel models
 
-I recently noticed someone—I wish I could recall who—tweet about Efron and Morris’s classic paper, [*Stein’s Paradox in Statistics*](http://statweb.stanford.edu/~ckirby/brad/other/Article1977.pdf). I was vaguely aware of it, but hadn’t taken the chance to read it. The tweet’s author mentioned how good a read it was. Now I’ve looked at it, I concur. I’m not a sports fan, but I really appreciated their primary example using batting averages from baseball players in 1970. It clarified why partial pooling leads to better estimates than taking simple averages. In this project, I’ll walk out their example in R and then link it to contemporary Bayesian multilevel models.
+I recently noticed someone—I wish I could recall who—tweet about Efron and Morris’s classic paper, [*Stein’s Paradox in Statistics*](http://statweb.stanford.edu/~ckirby/brad/other/Article1977.pdf). I was vaguely aware of the paper, but hadn’t taken the chance to read it. The tweet’s author mentioned how good a read it was. Now I’ve looked at it, I concur. I’m not a sports fan, but I really appreciated their primary example using batting averages from baseball players in 1970. It clarified why partial pooling leads to better estimates than taking simple averages. In this project, I’ll walk out their example in R and then link it to contemporary Bayesian multilevel models.
 
 ### I assume things.
 
@@ -35,7 +35,7 @@ baseball <- read_excel("data/James_Stein_baseball_data.xlsx")
 head(baseball)
 ```
 
-We have data from 18 players. The main columns are of the number of `hits` for their first 45 `times_at_bat`. I got the `player` through `times_at_bat` values directly from the paper. However, Efron and Morris didn't include the batting averages for the end of the season in the paper. However, I was able to find those values [online](http://statweb.stanford.edu/~ckirby/brad/LSI/chapter1.pdf). They're, included in the `true_ba` column.
+We have data from 18 players. The main columns are of the number of `hits` for their first 45 `times_at_bat`. I got the `player` through `times_at_bat` values directly from the paper. However, Efron and Morris didn't include the batting averages for the end of the season in the paper. However, I was able to find those values [online](http://statweb.stanford.edu/~ckirby/brad/LSI/chapter1.pdf). They're included in the `true_ba` column.
 
 The color theme for the plots in this project come from [here](https://teamcolorcodes.com/seattle-mariners-color-codes/).
 
@@ -50,7 +50,7 @@ theme_set(theme_grey() +
                   strip.background = element_rect(fill = silver)))
 ```
 
-To get a sense of the data, their `hits` look like this:
+We might use a histogram to get a sense of the `hits`.
 
 ```{r, fig.width = 4, fig.height = 2.75}
 baseball %>% 
@@ -79,7 +79,7 @@ baseball %>%
 
 ### James-Stein will help us achieve our goal.
 
-For each of the 18 players in the data set, our goal is to the best job possible to use their initial batting average data (i.e., `hits` and `times_at_bat`) to predict their batting averages at the end of the season (i.e., `true_ba`). Before Stein, the conventional reasoning is that their initial batting averages (i.e., `hits / times_at_bat`) are the best way to do this. Turns out that would be naïve. To see why, let
+For each of the 18 players in the data, our goal is to the best job possible to use their initial batting average data (i.e., `hits` and `times_at_bat`) to predict their batting averages at the end of the season (i.e., `true_ba`). Before Stein, the conventional reasoning was their initial batting averages (i.e., `hits / times_at_bat`) are the best way to do this. It turns out that would be naïve. To see why, let
 
 * `y` (i.e., $y$) = the batting average for the first 45 times at bat
 * `y_bar` (i.e., $\overline{y}$) = the grand mean for the first 45 times at bat
@@ -90,6 +90,8 @@ For each of the 18 players in the data set, our goal is to the best job possible
 > The first step in applying stein’s method is to determine the average of the averages. Obviously this grand average, which we give the symbol $\overline y$, must also lie between 0 and 1. The essential process in Stein’s method is the "shrinking" of all the individual averages toward this grand average. If a player’s hitting record is better than the grand average, then it must be reduced; if he is not hitting as well as the grand average, then his hitting record must be increased. The resulting shrunken value for each player we designate $z$. (p. 119)
 
 As such, the James-Stein estimator is
+
+![](JS-estimator_formula.PNG)
 
 $$z = \overline{y} + c (y - \overline{y})$$
 
@@ -126,7 +128,7 @@ baseball %>%
   labs(x = "batting average", y = NULL)
 ```
 
-As implied in the formula, the James-Stein estimates are substantially shrunken towards the grand mean $\overline y$. To get a sense of which estimate is better, we can subtract the estimate from `theta`, the end of the season batting average.
+As implied in the formula, the James-Stein estimates are substantially shrunken towards the grand mean, `y_bar`. To get a sense of which estimate is better, we can subtract the estimate from `theta`, the end of the season batting average.
 
 ```{r}
 baseball <-
@@ -151,7 +153,7 @@ baseball %>%
   labs(x = NULL, y = NULL)
 ```
 
-The James-Stein errors (i.e., `z_error`) are much more concentrated toward zero. In the paper, we read: "One method of evaluating the two estimates is by simple counting their successes and failures. For 16 of the 18 players the James-stein estimator $z$ is closer than the observed average $y$ to the 'true,' or seasonal, average $\theta$." We can compute that like so:
+The James-Stein errors (i.e., `z_error`) are much more concentrated toward zero. In the paper, we read: "One method of evaluating the two estimates is by simple counting their successes and failures. For 16 of the 18 players the James-Stein estimator $z$ is closer than the observed average $y$ to the 'true,' or seasonal, average $\theta$." We can compute that like so:
 
 ```{r}
 baseball %>% 

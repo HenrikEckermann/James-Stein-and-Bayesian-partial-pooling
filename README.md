@@ -4,7 +4,7 @@ James-Stein and Bayesian partial pooling
 [tl;dr](https://www.urbandictionary.com/define.php?term=tl%3Bdr)
 ----------------------------------------------------------------
 
-The James-Stein estimator leads to better predictions than simple means. Though I don’t recommend you actually use the James-Stein estimator in applied research, understanding why it works might help clarify why we should [default to multilevel models](http://elevanth.org/blog/2017/08/24/multilevel-regression-as-default/).
+The James-Stein estimator leads to better predictions than simple means. Though I don’t recommend you actually use the James-Stein estimator in applied research, understanding why it works might help clarify why we should [default to multilevel models](http://elevanth.org/blog/2017/08/24/multilevel-regression-as-default/) for applied statistics.
 
 James-Stein can help us understand multilevel models
 ----------------------------------------------------
@@ -38,9 +38,9 @@ head(baseball)
     ## 5 Berry         14           45   0.273
     ## 6 Spencer       14           45   0.27
 
-We have data from 18 players. The main columns are of the number of `hits` for their first 45 `times_at_bat`. I got the `player` through `times_at_bat` values directly from the paper. However, Efron and Morris didn't include the batting averages for the end of the season in the paper. However, I was able to find those values [online](http://statweb.stanford.edu/~ckirby/brad/LSI/chapter1.pdf). They're included in the `true_ba` column.
+We have data from 18 players. The main columns are of the number of `hits` for their first 45 `times_at_bat`. I got the `player` through `times_at_bat` values directly from the paper. However, Efron and Morris didn't include the batting averages for the end of the season in the paper. But I was able to find those values [online](http://statweb.stanford.edu/~ckirby/brad/LSI/chapter1.pdf). They're included in the `true_ba` column.
 
-The color theme for the plots in this project come from [here](https://teamcolorcodes.com/seattle-mariners-color-codes/).
+I like to understand what I'm doing with lots of plots. The color theme for the plots in this project comes from [here](https://teamcolorcodes.com/seattle-mariners-color-codes/).
 
 ``` r
 navy_blue <- "#0C2C56"
@@ -86,7 +86,7 @@ baseball %>%
 
 ### James-Stein will help us achieve our goal.
 
-For each of the 18 players in the data, our goal is to the best job possible to use their initial batting average data (i.e., `hits` and `times_at_bat`) to predict their batting averages at the end of the season (i.e., `true_ba`). Before Stein, the conventional reasoning was their initial batting averages (i.e., `hits / times_at_bat`) are the best way to do this. It turns out that would be naïve. To see why, let
+For each of the 18 players in the data, our goal is to the best job possible to use the batting average data for their first 45 times at bat (i.e., `hits` and `times_at_bat`) to predict their batting averages at the end of the season (i.e., `true_ba`). Before Stein, the conventional reasoning was their initial batting averages (i.e., `hits / times_at_bat`) are the best way to do this. It turns out that would be naïve. To see why, let
 
 -   `y` (i.e., *y*) = the batting average for the first 45 times at bat
 -   `y_bar` (i.e., $\\overline{y}$) = the grand mean for the first 45 times at bat
@@ -94,7 +94,7 @@ For each of the 18 players in the data, our goal is to the best job possible to 
 -   `z` (i.e., *z*) = James-Stein estimate
 -   `true_ba` (i.e., `theta`, *θ*) = the batting average at the end of the season
 
-> The first step in applying stein’s method is to determine the average of the averages. Obviously this grand average, which we give the symbol $\\overline y$, must also lie between 0 and 1. The essential process in Stein’s method is the "shrinking" of all the individual averages toward this grand average. If a player’s hitting record is better than the grand average, then it must be reduced; if he is not hitting as well as the grand average, then his hitting record must be increased. The resulting shrunken value for each player we designate *z*. (p. 119)
+> The first step in applying Stein’s method is to determine the average of the averages. Obviously this grand average, which we give the symbol $\\overline y$, must also lie between 0 and 1. The essential process in Stein’s method is the "shrinking" of all the individual averages toward this grand average. If a player’s hitting record is better than the grand average, then it must be reduced; if he is not hitting as well as the grand average, then his hitting record must be increased. The resulting shrunken value for each player we designate *z*. (p. 119)
 
 As such, the James-Stein estimator is:
 
@@ -217,7 +217,7 @@ baseball %>%
     ## 1 y_error              0.0755
     ## 2 z_error              0.0214
 
-We can get the 3.5 value like so:
+We can get the 3.5 value with simple division.
 
 ``` r
 0.07548795 / 0.02137602
@@ -258,20 +258,18 @@ baseball %>%
 
 ![](README_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
-The James-Stein estimator works because of its shrinkage. The shrinkage factor is *c*. In the first parts of the paper, Efron and Morris just told us *c* = .212. A little later in the paper, they give the formula for *c*. If you let *k* be the number of means (i.e., the number of clusters), then:
+The James-Stein estimator works because of its shrinkage. The shrinkage factor is *c*. In the first parts of the paper, Efron and Morris just told us *c* = .212. A little later in the paper, they gave the actual formula for *c*. If you let *k* be the number of means (i.e., the number of clusters), then:
 
 <img src="pictures/shrink_factor.png"/>
 
-The difficulty of that formula is we don't know the value for *σ*<sup>2</sup>. It's not the simple variance of *y* (i.e., `var(y)`). An [answer to this stackexchange question](https://stats.stackexchange.com/questions/5727/james-stein-estimator-how-did-efron-and-morris-calculate-sigma2-in-shrinkag) appears to have uncovered the method Efron and Morris used in the paper. I'll reproduce it in detail.
+The difficulty of that formula is we don't know the value for *σ*<sup>2</sup>. It's not the simple variance of *y* (i.e., `var(y)`). An [answer to this stackexchange question](https://stats.stackexchange.com/questions/5727/james-stein-estimator-how-did-efron-and-morris-calculate-sigma2-in-shrinkag) appears to have uncovered the method Efron and Morris used in the paper. I'll reproduce it in detail:
 
 <img src="pictures/answer.png"/>
 
 Thus, we can compute `sigma_squared` like so:
 
 ``` r
-(
-  sigma_squared <- mean(baseball$y) * (1 - mean(baseball$y)) / 45
-)
+(sigma_squared <- mean(baseball$y) * (1 - mean(baseball$y)) / 45)
 ```
 
     ## [1] 0.004332842
@@ -302,7 +300,7 @@ It wouldn’t be unreasonable to ask, *Why all this fuss about the James-Stein e
 library(brms)
 ```
 
-I typically work with the linear regression paradigm. If we were to analyze the `baseball` with linear regression, we’d use an aggregated binomial model—which you can learn more about [here](https://www.youtube.com/watch?v=DyrUkqK9Tj4&t=1581s&frags=pl%2Cwn) or [here](https://github.com/ASKurz/Statistical_Rethinking_with_brms_ggplot2_and_the_tidyverse/blob/master/10.md). If we wanted a model that corresponded to the *y* estimates, above, we’d use `hits` as the criterion and allow each player to get their own *separate* estimate. Since we’re working within the Bayesian paradigm, we also need to assign priors. In this case, we’ll use a weakly-regularizing Normal(0, 2) on the intercepts. Here’s the model code.
+I typically work with the linear regression paradigm. If we were to analyze the `baseball` with linear regression, we’d use an aggregated binomial model—which you can learn more about [here](https://www.youtube.com/watch?v=DyrUkqK9Tj4&t=1581s&frags=pl%2Cwn) or [here](https://github.com/ASKurz/Statistical_Rethinking_with_brms_ggplot2_and_the_tidyverse/blob/master/10.md). If we wanted a model that corresponded to the *y* estimates, above, we’d use `hits` as the criterion and allow each player to get their own *separate* estimate. Since we’re working within the Bayesian paradigm, we also need to assign priors. In this case, we’ll use a weakly-regularizing Normal(0, 2) on the intercepts. See [this wiki](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations) for more on weakly-regularizing priors. Here’s the model code.
 
 ``` r
 fit_y <-
@@ -325,7 +323,7 @@ fit_z <-
                 prior(normal(0, 2), class = sd)))
 ```
 
-And that model followed the statistical formula
+And that model followed the statistical formula:
 
 <img src="pictures/fit_z.png"/>
 
@@ -443,7 +441,7 @@ baseball %>%
     ##   <dbl>
     ## 1 0.256
 
-So now we have these too competing ways to model the data of the first 45 times at bat, let’s see how well their estimates predict the `true_ba` values.
+So now we have these too competing ways to model the data of the first 45 times at bat, let’s see how well their estimates predict the `true_ba` values. We'll do so with a couple plots.
 
 ``` r
 true_grand_mean <- mean(baseball$true_ba)
@@ -602,6 +600,9 @@ grid.arrange(p3, p4, ncol = 2)
 ![](README_files/figure-markdown_github/unnamed-chunk-24-1.png)
 
 \[For consistency, I’ve ordered the players the same as in the previous plots.\] In both panels, we show the prediction error distribution for each player in green and summarize those distributions in terms of their means and percentile-based 95% intervals. Since these are error distributions, we prefer them to be as close to zero as possible. Although neither model made perfect predictions, the overall errors in the multilevel model were clearly smaller. Much like with the James-Stein estimator, the partial pooling of the multilevel model made for better end-of-the-season estimates.
+
+Next steps
+----------
 
 If you’re new to multilevel models and would like to learn more, I recommend any of the following texts:
 

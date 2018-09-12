@@ -91,9 +91,11 @@ For each of the 18 players in the data, our goal is to the best job possible to 
 
 As such, the James-Stein estimator is
 
-![](pictures/JS-estimator_formula.png)
+<center>
 
-$$z = \overline{y} + c (y - \overline{y})$$
+![](pictures/JS_estimator.png)
+
+</center>
 
 And in the paper, $c = .212$. Let's get some of those values into the `baseball` data.
 
@@ -212,23 +214,19 @@ baseball %>%
 
 The James-Stein estimator works because of its shrinkage. The shrinkage factor is $c$. In the first parts of the paper, Efron and Morris just told us $c = .212$. A little later in the paper, they give the formula for $c$. If you let $k$ be the number of means (i.e., the number of clusters), then 
 
-$$c = 1 - \frac{(k - 3) \sigma^2}{\sum (y - \overline{y}) ^ 2}$$
+<center>
 
-The difficulty of that formula is we don't know the value for $\sigma^2$. It's not the simple variance of $y$ (i.e., `var(y)`). An [answer to this stackexchange question](https://stats.stackexchange.com/questions/5727/james-stein-estimator-how-did-efron-and-morris-calculate-sigma2-in-shrinkag) appears to have uncovered the method Efron and Morris used in the paper. I'll quote it in detail.
+![](pictures/shrink_factor.png)
 
-> The parameter $\sigma^2$ is the (unknown) common variance of the vector components, each of which we assume are normally distributed. For the baseball data we have $45 \cdot Y_i \sim \text{binom} (45, p_i)$, so the normal approximation to the binomial distribution gives (taking $\hat{p_i} = Y_i$)
->
-> $$\hat{p_i} \approx \text{norm} (\text{mean} = p_i, \text{var} = p_i (1 - p_i)/45)$$
->
-> Obviously in this case the variances are not equal, yet if they had been equal to a common value then we could estimate it with the pooled estimator
->
-> $$\hat{\sigma}^2 = \frac{\hat{p} (1 - \hat{p})}{45},$$
->
-> where $\hat{p}$ is the grand mean
->
-> $$\hat{p} = \frac{1}{18 \cdot 45} \sum_{i = 1}^{18} 45 \cdot Y_i = \overline{Y}$$
->
-> It looks as though this is what Efron and Morris have done (in the 1977 paper).
+</center>
+
+The difficulty of that formula is we don't know the value for $\sigma^2$. It's not the simple variance of $y$ (i.e., `var(y)`). An [answer to this stackexchange question](https://stats.stackexchange.com/questions/5727/james-stein-estimator-how-did-efron-and-morris-calculate-sigma2-in-shrinkag) appears to have uncovered the method Efron and Morris used in the paper. I'll reproduce it in detail.
+
+<center>
+
+![](pictures/answer.png)
+
+</center>
 
 Thus, we can compute `sigma_squared` like so:
 
@@ -269,13 +267,11 @@ fit_y <-
 
 If you were curious, that model followed the statistical formula
 
-$$
-\begin{eqnarray}
-\text{hits}_i & \sim & \text{Binomial} (n = 45, p_i) \\
-\text{logit} (p_i) & = & \alpha_{\text{player}} \\
-\alpha_{\text{player}} & \sim & \text{Normal} (0, 2) \\
-\end{eqnarray}
-$$
+<center>
+
+![](pictures/fit_y.png)
+
+</center>
 
 For our analogue to the James-Stein estimate $z$, we’ll fit the multilevel version of the last model. While each player still gets his own estimate, those estimates are now partially-pooled toward the grand mean.
 
@@ -289,15 +285,11 @@ fit_z <-
 
 And that model followed the statistical formula
 
-$$
-\begin{eqnarray}
-\text{hits}_i & \sim & \text{Binomial} (n = 45, p_i) \\
-\text{logit} (p_i) & = & \alpha + \alpha_{\text{player}_i} \\
-\alpha_{\text{player}} & \sim & \text{Normal} (0, 2) \\
-\alpha_{\text{player}} & \sim & \text{Normal} (0, \sigma_{\text{player}}) \\ 
-\sigma_{\text{player}} & \sim & \text{HalfNormal} (0, 2)
-\end{eqnarray}
-$$
+<center>
+
+![](pictures/fit_z.png)
+
+</center>
 
 Here are the model summaries.
 

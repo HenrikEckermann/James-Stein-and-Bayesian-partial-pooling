@@ -1,0 +1,514 @@
+---
+output:
+  md_document:
+    variant: markdown_github
+---
+
+```{r set-options, echo = FALSE, cache = FALSE}
+options(width = 100)
+```
+
+# James-Stein and Bayesian partial pooling
+
+## [tl;dr](https://www.urbandictionary.com/define.php?term=tl%3Bdr)
+
+The James-Stein estimator leads to better predictions than simple means. Though I don’t recommend you actually use the James-Stein estimator in applied research, understanding why it works might help clarify why we should [default to multilevel models](http://elevanth.org/blog/2017/08/24/multilevel-regression-as-default/).
+
+## James-Stein can help us understand multilevel models
+
+I recently noticed someone—I wish I could recall who—tweet about Efron and Morris’s classic paper, [*Stein’s Paradox in Statistics*](http://statweb.stanford.edu/~ckirby/brad/other/Article1977.pdf). I was vaguely aware of it, but hadn’t taken the chance to read it. The tweet’s author mentioned how good a read it was. Now I’ve looked at it, I concur. I’m not a sports fan, but I really appreciated their primary example using batting averages from baseball players in 1970. It clarified why partial pooling leads to better estimates than taking simple averages. In this project, I’ll walk out their example in R and then link it to contemporary Bayesian multilevel models.
+
+### I assume things.
+
+For this project, I’m presuming you are familiar with linear regression, vaguely familiar with the basic differences between frequentist and Bayesian approaches to fitting regression models, and have heard of multilevel models. All code in is [R](https://www.r-project.org/about.html), with a heavy use of the [tidyverse](https://www.tidyverse.org)—which you might learn a lot about [here](http://r4ds.had.co.nz), especially [chapter 5](http://r4ds.had.co.nz/transform.html)—, and the [brms package](https://github.com/paul-buerkner/brms).
+
+### Behold the `baseball` data.
+
+First, we'll load the `baseball` data from the example.
+
+```{r, message = F, warning = F}
+library(readxl)
+library(tidyverse)
+
+baseball <- read_excel("data/James_Stein_baseball_data.xlsx")
+
+head(baseball)
+```
+
+We have data from 18 players. The main columns are of the number of `hits` for their first 45 `times_at_bat`. I got the `player` through `times_at_bat` values directly from the paper. However, Efron and Morris didn't include the batting averages for the end of the season in the paper. However, I was able to find those values [online](http://statweb.stanford.edu/~ckirby/brad/LSI/chapter1.pdf). They're, included in the `true_ba` column.
+
+The color theme for the plots in this project come from [here](https://teamcolorcodes.com/seattle-mariners-color-codes/).
+
+```{r}
+navy_blue <- "#0C2C56"
+nw_green  <- "#005C5C"  
+silver    <- "#C4CED4"
+
+theme_set(theme_grey() +
+            theme(panel.grid = element_blank(),
+                  panel.background = element_rect(fill = silver),
+                  strip.background = element_rect(fill = silver)))
+```
+
+To get a sense of the data, their `hits` look like this:
+
+```{r, fig.width = 4, fig.height = 2.75}
+baseball %>% 
+  ggplot(aes(x = hits)) +
+  geom_histogram(color = nw_green,
+                 fill  = navy_blue,
+                 size  = 1/10, binwidth = 1) +
+  scale_x_continuous("hits over the first 45 trials",
+                     breaks = 7:18)
+```
+
+And this is the distribution of the end-of-the-season batting averages, `true_ba`.
+
+```{r, message = F, warning = F, fig.width = 4, fig.height = 3}
+library(tidybayes)
+
+baseball %>% 
+  ggplot(aes(x = true_ba, y = 0)) +
+  geom_halfeyeh(color = navy_blue,
+                fill  = alpha(nw_green, 2/3),
+                point_range = median_qi, .width = .5) +
+  geom_rug(color = navy_blue,
+           size = 1/3, alpha = 1/2) +
+  ggtitle(NULL, subtitle = "The dot and horizontal line are the median and\ninterquartile range, respectively.")
+```
+
+### James-Stein will help us achieve our goal.
+
+For each of the 18 players in the data set, our goal is to the best job possible to use their initial batting average data (i.e., `hits` and `times_at_bat`) to predict their batting averages at the end of the season (i.e., `true_ba`). Before Stein, the conventional reasoning is that their initial batting averages (i.e., `hits / times_at_bat`) are the best way to do this. Turns out that would be naïve. To see why, let
+
+* `y` (i.e., $y$) = the batting average for the first 45 times at bat
+* `y_bar` (i.e., $\overline{y}$) = the grand mean for the first 45 times at bat
+* `c` (i.e., $c$) = shrinking factor
+* `z` (i.e., $z$) = James-Stein estimate
+* `true_ba` (i.e., `theta`, $\theta$) = the batting average at the end of the season
+
+> The first step in applying stein’s method is to determine the average of the averages. Obviously this grand average, which we give the symbol $\overline y$, must also lie between 0 and 1. The essential process in Stein’s method is the "shrinking" of all the individual averages toward this grand average. If a player’s hitting record is better than the grand average, then it must be reduced; if he is not hitting as well as the grand average, then his hitting record must be increased. The resulting shrunken value for each player we designate $z$. (p. 119)
+
+As such, the James-Stein estimator is
+
+$$z = \overline{y} + c (y - \overline{y})$$
+
+And in the paper, $c = .212$. Let's get some of those values into the `baseball` data.
+
+```{r}
+(
+  baseball <-
+  baseball %>% 
+  mutate(y     = hits / times_at_bat) %>% 
+  mutate(y_bar = mean(y),
+         c     = .212) %>% 
+  mutate(z     = y_bar + c * (y - y_bar),
+         theta = true_ba)
+  )
+```
+
+Now we have both $y$ and $z$ in the data, let's compare their distributions.
+
+```{r, fig.width = 5, fig.height = 3}
+baseball %>% 
+  select(y, z) %>% 
+  gather() %>% 
+  mutate(label = ifelse(key == "z", 
+                        "James-Stein estimate", 
+                        "early-season batting average")) %>% 
+  
+  ggplot(aes(x = value, y = label)) +
+  geom_vline(color = "white",
+             xintercept = 0.2654321, linetype = 2) +
+  geom_halfeyeh(color = navy_blue,
+                fill  = alpha(nw_green, 2/3),
+                point_range = median_qi, .width = .5) +
+  labs(x = "batting average", y = NULL)
+```
+
+As implied in the formula, the James-Stein estimates are substantially shrunken towards the grand mean $\overline y$. To get a sense of which estimate is better, we can subtract the estimate from `theta`, the end of the season batting average.
+
+```{r}
+baseball <-
+  baseball %>% 
+  mutate(y_error = theta - y,
+         z_error = theta - z)
+```
+
+Since `y_error` and `y_error` are error distributions, we prefer values to be as close to zero as possible. Let's look at their distributions.
+
+```{r, fig.width = 4, fig.height = 3}
+baseball %>% 
+  select(y_error:z_error) %>% 
+  gather() %>% 
+  
+  ggplot(aes(x = value, y = key)) +
+  geom_vline(xintercept = 0, linetype = 2,
+             color = "white") +
+  geom_halfeyeh(color = navy_blue,
+                fill  = alpha(nw_green, 2/3),
+                point_range = median_qi, .width = .5) +
+  labs(x = NULL, y = NULL)
+```
+
+The James-Stein errors (i.e., `z_error`) are much more concentrated toward zero. In the paper, we read: "One method of evaluating the two estimates is by simple counting their successes and failures. For 16 of the 18 players the James-stein estimator $z$ is closer than the observed average $y$ to the 'true,' or seasonal, average $\theta$." We can compute that like so:
+
+```{r}
+baseball %>% 
+  transmute(closer_to_theta = ifelse(abs(y_error) - abs(z_error) == 0, "equal",
+                                     ifelse(abs(y_error) - abs(z_error) > 0, "z", "y"))) %>% 
+  group_by(closer_to_theta) %>% 
+  count()
+```
+
+We then read: "The observed averages $y$ have a total squared error of .077, whereas the squared error of the James-Stein estimators is only .022. By this comparison, then, Stein’s method is 3.5 times as accurate."
+
+```{r}
+baseball %>% 
+  select(y_error:z_error) %>% 
+  gather() %>% 
+  group_by(key) %>% 
+  summarise(total_squared_error = sum(value * value))
+```
+
+We can get the 3.5 value like so:
+
+```{r}
+0.07548795 / 0.02137602
+```
+
+So it does indeed turn out that shrinking each player’s initial estimate toward the grand mean of those initial estimates does a better job of predicting their end-of-the-season batting averages than using their individual batting averages.
+
+To get a sense of what this looks like, let’s make our own version of the figure on page 121.
+
+```{r, fig.width = 6, fig.height = 4}
+baseball %>% 
+  select(y, z, theta, player) %>% 
+  gather(key, value, -player) %>% 
+  mutate(time = ifelse(key == "theta", "theta", "estimate")) %>% 
+  bind_rows(
+    baseball %>% 
+      select(player, theta) %>% 
+      rename(value = theta) %>% 
+      mutate(key  = "theta", 
+             time = "theta")
+  ) %>% 
+  mutate(facet = rep(c("estimate = y", "estimate = z"), each = n() / 4) %>% rep(., times = 2)) %>% 
+  
+  ggplot(aes(x = time, y = value, group = player)) +
+  geom_hline(yintercept = 0.2654321, linetype = 2,
+             color = "white") +
+  geom_line(alpha = 1/2,
+            color = nw_green) +
+  geom_point(alpha = 1/2,
+             color = navy_blue) +
+  labs(x = NULL,
+       y = "batting average") +
+  theme(axis.ticks.x = element_blank()) +
+  facet_wrap(~facet)
+```
+
+The James-Stein estimator works because of its shrinkage. The shrinkage factor is $c$. In the first parts of the paper, Efron and Morris just told us $c = .212$. A little later in the paper, they give the formula for $c$. If you let $k$ be the number of means (i.e., the number of clusters), then 
+
+$$c = 1 - \frac{(k - 3) \sigma^2}{\sum (y - \overline{y}) ^ 2}$$
+
+The difficulty of that formula is we don't know the value for $\sigma^2$. It's not the simple variance of $y$ (i.e., `var(y)`). An [answer to this stackexchange question](https://stats.stackexchange.com/questions/5727/james-stein-estimator-how-did-efron-and-morris-calculate-sigma2-in-shrinkag) appears to have uncovered the method Efron and Morris used in the paper. I'll quote it in detail.
+
+> The parameter $\sigma^2$ is the (unknown) common variance of the vector components, each of which we assume are normally distributed. For the baseball data we have $45 \cdot Y_i \sim \text{binom} (45, p_i)$, so the normal approximation to the binomial distribution gives (taking $\hat{p_i} = Y_i$)
+>
+> $$\hat{p_i} \approx \text{norm} (\text{mean} = p_i, \text{var} = p_i (1 - p_i)/45)$$
+>
+> Obviously in this case the variances are not equal, yet if they had been equal to a common value then we could estimate it with the pooled estimator
+>
+> $$\hat{\sigma}^2 = \frac{\hat{p} (1 - \hat{p})}{45},$$
+>
+> where $\hat{p}$ is the grand mean
+>
+> $$\hat{p} = \frac{1}{18 \cdot 45} \sum_{i = 1}^{18} 45 \cdot Y_i = \overline{Y}$$
+>
+> It looks as though this is what Efron and Morris have done (in the 1977 paper).
+
+Thus, we can compute `sigma_squared` like so:
+
+```{r}
+(
+  sigma_squared <- mean(baseball$y) * (1 - mean(baseball$y)) / 45
+)
+```
+
+Now we can reproduce the $c$ value from the paper.
+
+```{r}
+baseball %>% 
+  select(player, y:c) %>% 
+  mutate(deviation         = y - y_bar) %>%
+  mutate(squared_deviation = deviation ^ 2) %>% 
+  summarise(c_by_hand = 1 - ((n() - 3) * sigma_squared / sum(squared_deviation)))
+```
+
+And if you round up, we have .212.
+
+## Let’s go Bayesian
+
+It wouldn’t be unreasonable to ask, *Why all this fuss about the James-Stein estimator*? I use Bayesian multilevel models a lot in my research. The James-Stein estimator is not Bayesian, but it is a precursor to the kind of analyses we now do with Bayesian multilevel models, which pool cluster-level means toward a grand mean. To get a sense of this, let’s fit a couple models. First, let’s load the brms package.
+
+```{r, message = F, warning = F}
+library(brms)
+```
+
+I typically work with the linear regression paradigm. If we were to analyze the `baseball` with linear regression, we’d use an aggregated binomial model—which you can learn more about [here](https://www.youtube.com/watch?v=DyrUkqK9Tj4&t=1581s&frags=pl%2Cwn) or [here](https://github.com/ASKurz/Statistical_Rethinking_with_brms_ggplot2_and_the_tidyverse/blob/master/10.md). If we wanted a model that corresponded to the $y$ estimates, above, we’d use `hits` as the criterion and allow each player to get their own *separate* estimate. Since we’re working within the Bayesian paradigm, we also need to assign priors. In this case, we’ll use a weakly-regularizing $\text{Normal} (0, 2)$ on the intercepts. Here’s the model code.
+
+```{r fit_y, cache = T, message = F, warning = F, results = "hide"}
+fit_y <-
+  brm(data = baseball, family = binomial,
+      hits | trials(45) ~ 0 + player,
+      prior(normal(0, 2), class = b))
+```
+
+If you were curious, that model followed the statistical formula
+
+$$
+\begin{eqnarray}
+\text{hits}_i & \sim & \text{Binomial} (n = 45, p_i) \\
+\text{logit} (p_i) & = & \alpha_{\text{player}} \\
+\alpha_{\text{player}} & \sim & \text{Normal} (0, 2) \\
+\end{eqnarray}
+$$
+
+For our analogue to the James-Stein estimate $z$, we’ll fit the multilevel version of the last model. While each player still gets his own estimate, those estimates are now partially-pooled toward the grand mean.
+
+```{r fit_z, cache = T, message = F, warning = F, results = "hide"}
+fit_z <-
+  brm(data = baseball, family = binomial,
+      hits | trials(45) ~ 1 + (1 | player),
+      prior = c(prior(normal(0, 2), class = Intercept),
+                prior(normal(0, 2), class = sd)))
+```
+
+And that model followed the statistical formula
+
+$$
+\begin{eqnarray}
+\text{hits}_i & \sim & \text{Binomial} (n = 45, p_i) \\
+\text{logit} (p_i) & = & \alpha + \alpha_{\text{player}_i} \\
+\alpha_{\text{player}} & \sim & \text{Normal} (0, 2) \\
+\alpha_{\text{player}} & \sim & \text{Normal} (0, \sigma_{\text{player}}) \\ 
+\sigma_{\text{player}} & \sim & \text{HalfNormal} (0, 2)
+\end{eqnarray}
+$$
+
+Here are the model summaries.
+
+```{r}
+fit_y$fit
+fit_z$fit
+```
+
+If you’re new to aggregated binomial or logistic regression, those estimates might be confusing. For technical reasons—see [here](https://www.youtube.com/watch?v=DyrUkqK9Tj4&t=1430s&frags=pl%2Cwn)—, they’re in a log-odds metric. But we can use the `brms::inv_logit_scaled()` function to convert them back to a probability metric. *Why would we want a probability metric?*, you might ask. As it turns out, batting average is in a probability metric, too. So you might also think of the `brms::inv_logit_scaled()` as turning the model results into a batting-average metric. For example, if we wanted to bet the estimated batting average for E. Rodriguez baed on the `y_fit` model (i.e., the model corresponding to the $y$ estimator), we might do something like this.
+
+```{r}
+fixef(fit_y)["playerERodriguez", 1] %>% inv_logit_scaled()
+```
+
+To double check the model returned a sensible estimate, here's the corresponding `y` value from the `baseball` data.
+
+```{r}
+baseball %>% 
+  filter(player == "E Rodriguez") %>% 
+  select(y)
+```
+
+Here is the corresponding estimate from the multilevel model, `fit_z`:
+
+```{r}
+coef(fit_z)$player["E Rodriguez", 1, ] %>% inv_logit_scaled()
+```
+
+And indeed that’s pretty close to the `z` value from the `baseball` data.
+
+```{r}
+baseball %>% 
+  filter(player == "E Rodriguez") %>% 
+  select(z)
+```
+
+So now we have these too competing ways to model the data of the first 45 times at bat, let’s see how well their estimates predict the `true_ba` values.
+
+```{r}
+true_grand_mean <- mean(baseball$true_ba)
+
+p1 <-
+  fitted(fit_y, 
+         summary = F, 
+         scale = "linear") %>% 
+  as_tibble() %>% 
+  gather() %>% 
+  mutate(ba = inv_logit_scaled(value)) %>% 
+  group_by(key) %>% 
+  summarise(ll_95 = quantile(ba, probs = .025),
+            ll_50 = quantile(ba, probs = .25),
+            ul_50 = quantile(ba, probs = .75),
+            ul_95 = quantile(ba, probs = .975)) %>% 
+  mutate(player_number = str_remove(key, "V") %>% as.double()) %>% 
+  arrange(player_number) %>% 
+  select(player_number, ll_95:ul_95) %>% 
+  bind_cols(
+    baseball %>% 
+      select(player, true_ba)
+  ) %>% 
+  
+  ggplot(aes(x = reorder(player, true_ba))) +
+  geom_hline(yintercept = true_grand_mean, color = "white") +
+  geom_linerange(aes(ymin = ll_95, ymax = ul_95),
+                 color = nw_green, 
+                 size = 3.5, alpha = 1/3) +
+  geom_linerange(aes(ymin = ll_50, ymax = ul_50),
+                 color = nw_green, 
+                 size = 3.5, alpha = 1/3) +
+  geom_point(aes(y = true_ba),
+             size = 2, alpha = 3/4,
+             color = navy_blue) +
+  labs(x = NULL, 
+       y = "batting average",
+       subtitle = "fit_y, the no pooling model") +
+  coord_flip(ylim = c(0, .6)) +
+  theme(axis.text.y   = element_text(hjust = 0),
+        axis.ticks.y  = element_blank(),
+        plot.subtitle = element_text(hjust = .5))
+```
+
+
+```{r}
+p2 <-
+  fitted(fit_z, 
+         summary = F, 
+         scale = "linear") %>% 
+  as_tibble() %>% 
+  gather() %>% 
+  mutate(ba = inv_logit_scaled(value)) %>% 
+  group_by(key) %>% 
+  summarise(ll_95 = quantile(ba, probs = .025),
+            ll_50 = quantile(ba, probs = .25),
+            ul_50 = quantile(ba, probs = .75),
+            ul_95 = quantile(ba, probs = .975)) %>% 
+  mutate(player_number = str_remove(key, "V") %>% as.double()) %>% 
+  arrange(player_number) %>% 
+  select(player_number, ll_95:ul_95) %>% 
+  bind_cols(
+    baseball %>% 
+      select(player, true_ba)
+  ) %>% 
+  
+  ggplot(aes(x = reorder(player, true_ba))) +
+  geom_hline(yintercept = true_grand_mean, color = "white") +
+  geom_linerange(aes(ymin = ll_95, ymax = ul_95),
+                 color = nw_green, 
+                 size = 3.5, alpha = 1/3) +
+  geom_linerange(aes(ymin = ll_50, ymax = ul_50),
+                 color = nw_green, 
+                 size = 3.5, alpha = 1/3) +
+  geom_point(aes(y = true_ba),
+             size = 2, alpha = 3/4,
+             color = navy_blue) +
+  labs(x = NULL, 
+       y = "batting average",
+       subtitle = "fit_z, the multilevel pooling model") +
+  coord_flip(ylim = c(0, .6)) +
+  theme(axis.text.y   = element_text(hjust = 0),
+        axis.ticks.y  = element_blank(),
+        plot.subtitle = element_text(hjust = .5))
+```
+
+
+```{r, message = F, warning = F, fig.width = 8, fig.height = 3.5}
+library(gridExtra)
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+In both panels, the end-of-the-season batting averages (i.e., $\theta$) are the blue dots. The model-implied estimates are depicted by 95% and 50% interval bands (i.e., the lighter and darker green horizontal lines, respectively). The white line in the background marks off the mean of $\theta$. Although neither model was perfect, the multilevel model, our analogue to the James-Stein estimates, appeared to have made more valid and precise estimates.
+
+We might also compare the models by their prediction errors. Here we’ll subtract the end-of-the-season batting averages from the model estimates. But unlike with `y` and `z` estimates, above, our `fit_y` and `fit_z` models yielded entire posterior distributions. Therefore, we’ll express our prediction errors in terms of error distributions, rather than single values. 
+
+```{r, fig.width = 8, fig.height = 3.5}
+p3 <-
+  fitted(fit_y, 
+         summary = F, 
+         scale = "linear") %>% 
+  as_tibble() %>% 
+  gather() %>% 
+  mutate(ba = inv_logit_scaled(value)) %>% 
+  bind_cols(
+    baseball %>% 
+      expand(nesting(player, true_ba), iter = 1:4000)
+  ) %>% 
+  group_by(player) %>% 
+  mutate(error = ba - true_ba) %>% 
+  
+  ggplot(aes(x = error, y = reorder(player, true_ba))) +
+  geom_vline(xintercept = c(0, -.2, .2), size = c(1/2, 1/4, 1/4), 
+             linetype = c(1, 3, 3), color = "white") +
+  geom_halfeyeh(point_interval = mean_qi, .width = .95,
+                color = navy_blue, fill = alpha(nw_green, 2/3)) +
+  coord_cartesian(xlim = c(-.35, .35)) +
+  labs(x = "error", 
+       y = NULL,
+       subtitle = "fit_y, the no pooling model") +
+  theme(axis.text.y   = element_text(hjust = 0),
+        axis.ticks.y  = element_blank(),
+        plot.subtitle = element_text(hjust = .5))
+
+p4 <-
+  fitted(fit_z, 
+         summary = F, 
+         scale = "linear") %>% 
+  as_tibble() %>% 
+  gather() %>% 
+  mutate(ba = inv_logit_scaled(value)) %>% 
+  bind_cols(
+    baseball %>% 
+      expand(nesting(player, true_ba), iter = 1:4000)
+  ) %>% 
+  group_by(player) %>% 
+  mutate(error = ba - true_ba) %>% 
+  
+  ggplot(aes(x = error, y = reorder(player, true_ba))) +
+  geom_vline(xintercept = c(0, -.2, .2), size = c(1/2, 1/4, 1/4), 
+             linetype = c(1, 3, 3), color = "white") +
+  geom_halfeyeh(point_interval = mean_qi, .width = .95,
+                color = navy_blue, fill = alpha(nw_green, 2/3)) +
+  coord_cartesian(xlim = c(-.35, .35)) +
+  labs(x = "error", 
+       y = NULL,
+       subtitle = "fit_z, the multilevel pooling model") +
+  theme(axis.text.y   = element_text(hjust = 0),
+        axis.ticks.y  = element_blank(),
+        plot.subtitle = element_text(hjust = .5))
+
+grid.arrange(p3, p4, ncol = 2)
+```
+
+[For consistency, I’ve ordered the players the same as in the previous plots.] In both panels, we show the prediction error distribution for each player in green and summarize those distributions in terms of their means and percentile-based 95% intervals. Since these are error distributions, we prefer them to be as close to zero as possible. Although neither model made perfect predictions, the overall errors in the multilevel model were clearly smaller. Much like with the James-Stein estimator, the partial pooling of the multilevel model made for better end-of-the-season estimates.
+
+If you’re new to multilevel models and would like to learn more, I recommend any of the following texts:
+
+* [*Statistical Rethinking*](http://xcelab.net/rm/statistical-rethinking/)
+* [*Doing Bayesian Data Analysis*](https://sites.google.com/site/doingbayesiandataanalysis/)
+* [*Data Analysis Using Regression and Multilevel/Hierarchical Models*](http://www.stat.columbia.edu/~gelman/arm/)
+
+And if you choose *Statistical Rethinking*, do check out [these great lectures](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists) on the text or [my project translating the code in the text to brms and the tidyverse](https://github.com/ASKurz/Statistical_Rethinking_with_brms_ggplot2_and_the_tidyverse).
+
+## Reference {-}
+
+[Efron, B., & Morris, C. (1977). Stein’s paradox in statistics. *Scientific American, 236*, 119--127, doi: 10.1038/scientificamerican0577-119](http://statweb.stanford.edu/~ckirby/brad/other/Article1977.pdf)
+
+## Session info {-}
+
+```{r}
+sessionInfo()
+```
+
+```{r, echo = F}
+rm(baseball, navy_blue, nw_green, silver, sigma_squared, fit_y, fit_z, p1, p2, p3, p4)
+```
+

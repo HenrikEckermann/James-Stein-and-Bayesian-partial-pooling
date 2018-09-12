@@ -93,7 +93,7 @@ As such, the James-Stein estimator is
 
 <center>
 
-![](https://github.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/blob/master/pictures/JS_estimator.png)
+![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/JS_estimator.png)
 
 </center>
 
@@ -216,7 +216,7 @@ The James-Stein estimator works because of its shrinkage. The shrinkage factor i
 
 <center>
 
-![](pictures/shrink_factor.png)
+![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/shrink_factor.png)
 
 </center>
 
@@ -224,7 +224,7 @@ The difficulty of that formula is we don't know the value for $\sigma^2$. It's n
 
 <center>
 
-![](pictures/answer.png)
+![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/answer.png)
 
 </center>
 
@@ -269,7 +269,7 @@ If you were curious, that model followed the statistical formula
 
 <center>
 
-![](pictures/fit_y.png)
+![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/fit_y.png)
 
 </center>
 
@@ -287,7 +287,7 @@ And that model followed the statistical formula
 
 <center>
 
-![](pictures/fit_z.png)
+![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/fit_z.png)
 
 </center>
 

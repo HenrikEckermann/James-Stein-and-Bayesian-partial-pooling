@@ -99,7 +99,7 @@ For each of the 18 players in the data, our goal is to the best job possible to 
 As such, the James-Stein estimator is
 
 <center>
-![](https://github.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/blob/master/pictures/JS_estimator.png)
+![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/JS_estimator.png)
 
 </center>
 And in the paper, *c* = .212. Let's get some of those values into the `baseball` data.
@@ -263,13 +263,13 @@ baseball %>%
 The James-Stein estimator works because of its shrinkage. The shrinkage factor is *c*. In the first parts of the paper, Efron and Morris just told us *c* = .212. A little later in the paper, they give the formula for *c*. If you let *k* be the number of means (i.e., the number of clusters), then
 
 <center>
-![](pictures/shrink_factor.png)
+![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/shrink_factor.png)
 
 </center>
 The difficulty of that formula is we don't know the value for *σ*<sup>2</sup>. It's not the simple variance of *y* (i.e., `var(y)`). An [answer to this stackexchange question](https://stats.stackexchange.com/questions/5727/james-stein-estimator-how-did-efron-and-morris-calculate-sigma2-in-shrinkag) appears to have uncovered the method Efron and Morris used in the paper. I'll reproduce it in detail.
 
 <center>
-![](pictures/answer.png)
+![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/answer.png)
 
 </center>
 Thus, we can compute `sigma_squared` like so:
@@ -320,7 +320,7 @@ fit_y <-
 If you were curious, that model followed the statistical formula
 
 <center>
-![](pictures/fit_y.png)
+![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/fit_y.png)
 
 </center>
 For our analogue to the James-Stein estimate *z*, we’ll fit the multilevel version of the last model. While each player still gets his own estimate, those estimates are now partially-pooled toward the grand mean.
@@ -336,7 +336,7 @@ fit_z <-
 And that model followed the statistical formula
 
 <center>
-![](pictures/fit_z.png)
+![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/fit_z.png)
 
 </center>
 Here are the model summaries.

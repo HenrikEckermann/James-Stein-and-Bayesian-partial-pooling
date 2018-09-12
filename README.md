@@ -98,10 +98,8 @@ For each of the 18 players in the data, our goal is to the best job possible to 
 
 As such, the James-Stein estimator is
 
-<center>
-![](https://raw.githubusercontent.com/ASKurz/James-Stein-and-Bayesian-partial-pooling/master/pictures/JS_estimator.png)
+<img src="pictures/JS_estimator.png" />
 
-</center>
 And in the paper, *c* = .212. Let's get some of those values into the `baseball` data.
 
 ``` r

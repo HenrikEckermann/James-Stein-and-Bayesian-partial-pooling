@@ -98,7 +98,7 @@ For each of the 18 players in the data, our goal is to the best job possible to 
 
 As such, the James-Stein estimator is
 
-![](pictures/JS-estimator_formula.PNG)
+![](pictures/JS-estimator_formula.png)
 
 $$z = \\overline{y} + c (y - \\overline{y})$$
 

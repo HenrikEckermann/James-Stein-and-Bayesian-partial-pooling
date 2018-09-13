@@ -97,7 +97,7 @@ For each of the 18 players in the data, our goal is to the best job possible to 
 * `z` (i.e., $z$) = James-Stein estimate
 * `true_ba` (i.e., `theta`, $\theta$) = the batting average at the end of the season
 
-> The first step in applying Stein’s method is to determine the average of the averages. Obviously this grand average, which we give the symbol $\overline y$, must also lie between 0 and 1. The essential process in Stein’s method is the "shrinking" of all the individual averages toward this grand average. If a player’s hitting record is better than the grand average, then it must be reduced; if he is not hitting as well as the grand average, then his hitting record must be increased. The resulting shrunken value for each player we designate $z$. (p. 119)
+> The first step in applying Stein’s method is to determine the average of the averages. Obviously this grand average, which we give the symbol <img src="pictures/overline_y.png"/>, must also lie between 0 and 1. The essential process in Stein’s method is the "shrinking" of all the individual averages toward this grand average. If a player’s hitting record is better than the grand average, then it must be reduced; if he is not hitting as well as the grand average, then his hitting record must be increased. The resulting shrunken value for each player we designate $z$. (p. 119)
 
 As such, the James-Stein estimator is:
 

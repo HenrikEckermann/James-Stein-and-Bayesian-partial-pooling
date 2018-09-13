@@ -19,7 +19,7 @@ For this project, I’m presuming you are familiar with linear regression, vague
 
 ### Behold the `baseball` data.
 
-> Stein’s paradox concerns the use of observed averages to estimate unobservable quantities. Averaging is the second most basic process in statistics, the first being the simple act of counting. A baseball player who gets seven hits in 20 official times at bat is said to have a batting average of .350. In computing this statistic we are forming an estimate of the payer’s true batting ability in terms of his observed average rate of success. Asked how well the player will do in his next 100 times at bat, we would probably predict 35 more hits. In traditional statistical theory it can be proved that no other estimation rule is uniformly better than the observed average.
+> Stein’s paradox concerns the use of observed averages to estimate unobservable quantities. Averaging is the second most basic process in statistics, the first being the simple act of counting. A baseball player who gets seven hits in 20 official times at bat is said to have a batting average of .350. In computing this statistic we are forming an estimate of the player’s true batting ability in terms of his observed average rate of success. Asked how well the player will do in his next 100 times at bat, we would probably predict 35 more hits. In traditional statistical theory it can be proven that no other estimation rule is uniformly better than the observed average.
 >
 > The paradoxical element in Stein’s result is that it sometimes contradicts this elementary law of statistical theory. If we have three or more baseball players, and if we are interested in predicting future batting averages for each of them, then there is a procedure that is better than simply extrapolating from the three separate averages...
 >
@@ -175,7 +175,7 @@ baseball <-
          z_error = theta - z)
 ```
 
-Since `y_error` and `y_error` are error distributions, we prefer values to be as close to zero as possible. Let's look at their distributions.
+Since `y_error` and `z_error` are error distributions, we prefer values to be as close to zero as possible. Let's look at their distributions.
 
 ``` r
 baseball %>% 
@@ -410,7 +410,7 @@ fit_z$fit
     ## and Rhat is the potential scale reduction factor on split chains (at 
     ## convergence, Rhat=1).
 
-If you’re new to aggregated binomial or logistic regression, those estimates might be confusing. For technical reasons—see [here](https://www.youtube.com/watch?v=DyrUkqK9Tj4&t=1430s&frags=pl%2Cwn)—, they’re in a log-odds metric. But we can use the `brms::inv_logit_scaled()` function to convert them back to a probability metric. *Why would we want a probability metric?*, you might ask. As it turns out, batting average is in a probability metric, too. So you might also think of the `inv_logit_scaled()` function as turning the model results into a batting-average metric. For example, if we wanted to get the estimated batting average for E. Rodriguez baed on the `y_fit` model (i.e., the model corresponding to the *y* estimator), we might do something like this.
+If you’re new to aggregated binomial or logistic regression, those estimates might be confusing. For technical reasons—see [here](https://www.youtube.com/watch?v=DyrUkqK9Tj4&t=1430s&frags=pl%2Cwn)—, they’re in a log-odds metric. But we can use the `brms::inv_logit_scaled()` function to convert them back to a probability metric. *Why would we want a probability metric?*, you might ask. As it turns out, batting average is in a probability metric, too. So you might also think of the `inv_logit_scaled()` function as turning the model results into a batting-average metric. For example, if we wanted to get the estimated batting average for E. Rodriguez based on the `y_fit` model (i.e., the model corresponding to the *y* estimator), we might do something like this.
 
 ``` r
 fixef(fit_y)["playerERodriguez", 1] %>% inv_logit_scaled()

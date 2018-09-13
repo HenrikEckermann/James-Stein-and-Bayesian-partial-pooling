@@ -11,11 +11,11 @@ The James-Stein estimator leads to better predictions than simple means. Though 
 James-Stein can help us understand multilevel models
 ----------------------------------------------------
 
-I recently noticed someone—I wish I could recall who—tweet about Efron and Morris’s classic paper, [*Stein’s Paradox in Statistics*](http://statweb.stanford.edu/~ckirby/brad/other/Article1977.pdf). I was vaguely aware of the paper, but hadn’t taken the chance to read it. The tweet’s author mentioned how good a read it was. Now I’ve looked at it, I concur. I’m not a sports fan, but I really appreciated their primary example using batting averages from baseball players in 1970. It clarified why partial pooling leads to better estimates than taking simple averages. In this project, I’ll walk out their example in R and then link it to contemporary Bayesian multilevel models.
+I recently noticed someone—I wish I could recall who—tweet about Efron and Morris’s classic paper, [*Stein’s Paradox in Statistics*](http://statweb.stanford.edu/~ckirby/brad/other/Article1977.pdf). At the time, I was vaguely aware of the paper but hadn’t taken the chance to read it. The tweet’s author mentioned how good a read it was. Now I’ve looked at it, I concur. I’m not a sports fan, but I really appreciated their primary example using batting averages from baseball players in 1970. It clarified why partial pooling leads to better estimates than taking simple averages. In this project, I’ll walk out their example in R and then link it to contemporary Bayesian multilevel models.
 
 ### I assume things.
 
-For this project, I’m presuming you are familiar with linear regression, vaguely familiar with the basic differences between frequentist and Bayesian approaches to fitting regression models, and have heard of multilevel models. All code in is [R](https://www.r-project.org/about.html), with a heavy use of the [tidyverse](https://www.tidyverse.org)—which you might learn a lot about [here](http://r4ds.had.co.nz), especially [chapter 5](http://r4ds.had.co.nz/transform.html)—, and the [brms package](https://github.com/paul-buerkner/brms).
+For this project, I’m presuming you are familiar with linear regression, vaguely familiar with the basic differences between frequentist and Bayesian approaches to fitting regression models, and have heard of multilevel models. All code in is [R](https://www.r-project.org/about.html), with a heavy use of the [tidyverse](https://www.tidyverse.org)—which you might learn a lot about [here](http://r4ds.had.co.nz), especially [chapter 5](http://r4ds.had.co.nz/transform.html)—, and the [brms package](https://github.com/paul-buerkner/brms) for Bayesian regression.
 
 ### Behold the `baseball` data.
 
@@ -33,18 +33,15 @@ library(tidyverse)
 
 baseball <- read_excel("data/James_Stein_baseball_data.xlsx")
 
-head(baseball)
+glimpse(baseball)
 ```
 
-    ## # A tibble: 6 x 4
-    ##   player      hits times_at_bat true_ba
-    ##   <chr>      <dbl>        <dbl>   <dbl>
-    ## 1 Clemente      18           45   0.346
-    ## 2 F Robinson    17           45   0.298
-    ## 3 F Howard      16           45   0.276
-    ## 4 Johnstone     15           45   0.222
-    ## 5 Berry         14           45   0.273
-    ## 6 Spencer       14           45   0.27
+    ## Observations: 18
+    ## Variables: 4
+    ## $ player       <chr> "Clemente", "F Robinson", "F Howard", "Johnstone", "Berry", "Spencer", "Ke...
+    ## $ hits         <dbl> 18, 17, 16, 15, 14, 14, 13, 12, 11, 11, 10, 10, 10, 10, 10, 9, 8, 7
+    ## $ times_at_bat <dbl> 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45
+    ## $ true_ba      <dbl> 0.346, 0.298, 0.276, 0.222, 0.273, 0.270, 0.263, 0.210, 0.269, 0.230, 0.26...
 
 We have data from 18 players. The main columns are of the number of `hits` for their first 45 `times_at_bat`. I got the `player`, `hits`, and `times_at_bat` values directly from the paper. However, Efron and Morris didn't include the batting averages for the end of the season in the paper. Happily, I was able to find those values [online](http://statweb.stanford.edu/~ckirby/brad/LSI/chapter1.pdf). They're included in the `true_ba` column.
 
@@ -99,7 +96,7 @@ baseball %>%
 For each of the 18 players in the data, our goal is to the best job possible to use the batting average data for their first 45 times at bat (i.e., `hits` and `times_at_bat`) to predict their batting averages at the end of the season (i.e., `true_ba`). Before Stein, the conventional reasoning was their initial batting averages (i.e., `hits / times_at_bat`) are the best way to do this. It turns out that would be naïve. To see why, let
 
 -   `y` (i.e., *y*) = the batting average for the first 45 times at bat
--   `y_bar` (i.e., $\\overline{y}$) = the grand mean for the first 45 times at bat
+-   `y_bar` (i.e., <img src="pictures/overline_y.png"/>) = the grand mean for the first 45 times at bat
 -   `c` (i.e., *c*) = shrinking factor
 -   `z` (i.e., *z*) = James-Stein estimate
 -   `true_ba` (i.e., `theta`, *θ*) = the batting average at the end of the season

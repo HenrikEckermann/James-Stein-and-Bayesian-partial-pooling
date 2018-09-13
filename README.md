@@ -4,7 +4,9 @@ James-Stein and Bayesian partial pooling
 [tl;dr](https://www.urbandictionary.com/define.php?term=tl%3Bdr)
 ----------------------------------------------------------------
 
-The James-Stein estimator leads to better predictions than simple means. Though I don’t recommend you actually use the James-Stein estimator in applied research, understanding why it works might help clarify why we should [default to multilevel models](http://elevanth.org/blog/2017/08/24/multilevel-regression-as-default/) for applied statistics.
+> Sometimes a mathematical result is strikingly contrary to generally held belief even though an obviously valid proof is given. Charles Stein of Stanford University discovered such a paradox in statistics in 1995. His result undermined a century and a half of work on estimation theory. (p. 119)
+
+The James-Stein estimator leads to better predictions than simple means. Though I don’t recommend you actually use the James-Stein estimator in applied research, understanding why it works might help clarify why it's time social scientists [default to multilevel models](http://elevanth.org/blog/2017/08/24/multilevel-regression-as-default/) for applied statistics.
 
 James-Stein can help us understand multilevel models
 ----------------------------------------------------
@@ -17,7 +19,13 @@ For this project, I’m presuming you are familiar with linear regression, vague
 
 ### Behold the `baseball` data.
 
-First, we'll load the `baseball` data from the example.
+> Stein’s paradox concerns the use of observed averages to estimate unobservable quantities. Averaging is the second most basic process in statistics, the first being the simple act of counting. A baseball player who gets seven hits in 20 official times at bat is said to have a batting average of .350. In computing this statistic we are forming an estimate of the payer’s true batting ability in terms of his observed average rate of success. Asked how well the player will do in his next 100 times at bat, we would probably predict 35 more hits. In traditional statistical theory it can be proved that no other estimation rule is uniformly better than the observed average.
+>
+> The paradoxical element in Stein’s result is that it sometimes contradicts this elementary law of statistical theory. If we have three or more baseball players, and if we are interested in predicting future batting averages for each of them, then there is a procedure that is better than simply extrapolating from the three separate averages...
+>
+> As our primary data we shall consider the batting averages of 18 major-league players as they were recorded after their first 45 times at bat in the 1970 season. (p. 119)
+
+Let's load those `baseball` data.
 
 ``` r
 library(readxl)
@@ -39,6 +47,8 @@ head(baseball)
     ## 6 Spencer       14           45   0.27
 
 We have data from 18 players. The main columns are of the number of `hits` for their first 45 `times_at_bat`. I got the `player` through `times_at_bat` values directly from the paper. However, Efron and Morris didn't include the batting averages for the end of the season in the paper. But I was able to find those values [online](http://statweb.stanford.edu/~ckirby/brad/LSI/chapter1.pdf). They're included in the `true_ba` column.
+
+> ...These were all the players who happened to have batted exactly 45 times the day the data were tabulated. A batting average is defined, of course, simple as the number of hits divided by the number of times at bat; it is always a number between 0 and 1. (p. 119)
 
 I like to understand what I'm doing with lots of plots. The color theme for the plots in this project comes from [here](https://teamcolorcodes.com/seattle-mariners-color-codes/).
 
@@ -136,6 +146,8 @@ And in the paper, *c* = .212. Let's get some of those values into the `baseb
     ## 17 Munson          8           45   0.316 0.178 0.265 0.212 0.247 0.316
     ## 18 Alvis           7           45   0.2   0.156 0.265 0.212 0.242 0.2
 
+> Which set of values, *y* or *z*, is the better indicator of batting ability for the 18 players in our example? In order to answer that question in a precise way one would have to know the “true batting ability” of each player. This true average we shall designate *θ* (the Greek letter theta). Actually it is an unknowable quantity, an abstraction representing the probability that a player will get a hit on any given time at bat. Although *θ* is unobservable, we have a good approximation to it: the subsequent performance of the batters. It is sufficient to consider just the remainder of the 1970 season, which includes about nine times as much data as the preliminary averages were based on. (p. 119)
+
 Now we have both *y* and *z* in the data, let's compare their distributions.
 
 ``` r
@@ -184,7 +196,7 @@ baseball %>%
 
 ![](README_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
-The James-Stein errors (i.e., `z_error`) are much more concentrated toward zero. In the paper, we read: "One method of evaluating the two estimates is by simple counting their successes and failures. For 16 of the 18 players the James-Stein estimator *z* is closer than the observed average *y* to the 'true,' or seasonal, average *θ*." We can compute that like so:
+The James-Stein errors (i.e., `z_error`) are much more concentrated toward zero. In the paper, we read: "One method of evaluating the two estimates is by simple counting their successes and failures. For 16 of the 18 players the James-Stein estimator *z* is closer than the observed average *y* to the 'true,' or seasonal, average *θ*." We can compute that with a little `ifelse()`.
 
 ``` r
 baseball %>% 
@@ -201,7 +213,7 @@ baseball %>%
     ## 1 y                   2
     ## 2 z                  16
 
-We then read: "The observed averages *y* have a total squared error of .077, whereas the squared error of the James-Stein estimators is only .022. By this comparison, then, Stein’s method is 3.5 times as accurate."
+> A more quantitative way of comparing the two techniques is through the total squared error of estimation… The observed averages *y* have a total squared error of .077, whereas the squared error of the James-Stein estimators is only .022. By this comparison, then, Stein’s method is 3.5 times as accurate. (p. 121)
 
 ``` r
 baseball %>% 
@@ -294,7 +306,13 @@ And if you round up, we have .212.
 Let’s go Bayesian
 -----------------
 
-It wouldn’t be unreasonable to ask, *Why all this fuss about the James-Stein estimator*? I use Bayesian multilevel models a lot in my research. The James-Stein estimator is not Bayesian, but it is a precursor to the kind of analyses we now do with Bayesian multilevel models, which pool cluster-level means toward a grand mean. To get a sense of this, let’s fit a couple models. First, let’s load the brms package.
+Again, I don't recommend you actually use the James-Stein estimator in your research.
+
+> The James-Stein estimator is not the only one that is known to be better than the sample averages…
+>
+> The search for new estimators continues. Recent efforts \[in the 1970s, that is\] have been concentrated on achieving results like those obtained with Stein’s method for problems involving distributions other than the normal distribution. Several lines of work, including Stein’s and Robbins’ and more formal Bayesian methods seem to be converging on a powerful general theory of parameter estimation. (p. 127)
+
+I use Bayesian multilevel models a lot in my research. The James-Stein estimator is not Bayesian, but it is a precursor to the kind of analyses we now do with Bayesian multilevel models, which pool cluster-level means toward a grand mean. To get a sense of this, let’s fit a couple models. First, let’s load the brms package.
 
 ``` r
 library(brms)

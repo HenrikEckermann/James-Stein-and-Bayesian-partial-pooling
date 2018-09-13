@@ -4,7 +4,7 @@ James-Stein and Bayesian partial pooling
 [tl;dr](https://www.urbandictionary.com/define.php?term=tl%3Bdr)
 ----------------------------------------------------------------
 
-> Sometimes a mathematical result is strikingly contrary to generally held belief even though an obviously valid proof is given. Charles Stein of Stanford University discovered such a paradox in statistics in 1995. His result undermined a century and a half of work on estimation theory. (p. 119)
+> Sometimes a mathematical result is strikingly contrary to generally held belief even though an obviously valid proof is given. [Charles Stein](https://en.wikipedia.org/wiki/Charles_M._Stein) of Stanford University discovered such a paradox in statistics in 1995. His result undermined a century and a half of work on estimation theory. (p. 119)
 
 The James-Stein estimator leads to better predictions than simple means. Though I don’t recommend you actually use the James-Stein estimator in applied research, understanding why it works might help clarify why it's time social scientists [default to multilevel models](http://elevanth.org/blog/2017/08/24/multilevel-regression-as-default/) for applied statistics.
 
@@ -46,11 +46,11 @@ head(baseball)
     ## 5 Berry         14           45   0.273
     ## 6 Spencer       14           45   0.27
 
-We have data from 18 players. The main columns are of the number of `hits` for their first 45 `times_at_bat`. I got the `player` through `times_at_bat` values directly from the paper. However, Efron and Morris didn't include the batting averages for the end of the season in the paper. But I was able to find those values [online](http://statweb.stanford.edu/~ckirby/brad/LSI/chapter1.pdf). They're included in the `true_ba` column.
+We have data from 18 players. The main columns are of the number of `hits` for their first 45 `times_at_bat`. I got the `player`, `hits`, and `times_at_bat` values directly from the paper. However, Efron and Morris didn't include the batting averages for the end of the season in the paper. Happily, I was able to find those values [online](http://statweb.stanford.edu/~ckirby/brad/LSI/chapter1.pdf). They're included in the `true_ba` column.
 
-> ...These were all the players who happened to have batted exactly 45 times the day the data were tabulated. A batting average is defined, of course, simple as the number of hits divided by the number of times at bat; it is always a number between 0 and 1. (p. 119)
+> ...These were all the players who happened to have batted exactly 45 times the day the data were tabulated. A batting average is defined, of course, simply as the number of hits divided by the number of times at bat; it is always a number between 0 and 1. (p. 119)
 
-I like to understand what I'm doing with lots of plots. The color theme for the plots in this project comes from [here](https://teamcolorcodes.com/seattle-mariners-color-codes/).
+I like use a lot of plots to better understand what I'm doing. Before we start plotting, I should point out the color theme in this project comes from [here](https://teamcolorcodes.com/seattle-mariners-color-codes/).
 
 ``` r
 navy_blue <- "#0C2C56"
@@ -71,7 +71,7 @@ baseball %>%
   geom_histogram(color = nw_green,
                  fill  = navy_blue,
                  size  = 1/10, binwidth = 1) +
-  scale_x_continuous("hits over the first 45 trials",
+  scale_x_continuous("hits during the first 45 trials",
                      breaks = 7:18)
 ```
 
@@ -196,7 +196,7 @@ baseball %>%
 
 ![](README_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
-The James-Stein errors (i.e., `z_error`) are much more concentrated toward zero. In the paper, we read: "One method of evaluating the two estimates is by simple counting their successes and failures. For 16 of the 18 players the James-Stein estimator *z* is closer than the observed average *y* to the 'true,' or seasonal, average *θ*." We can compute that with a little `ifelse()`.
+The James-Stein errors (i.e., `z_error`) are much more concentrated toward zero. In the paper, we read: "One method of evaluating the two estimates is by simply counting their successes and failures. For 16 of the 18 players the James-Stein estimator *z* is closer than the observed average *y* to the 'true,' or seasonal, average *θ*" (pp. 119--121). We can compute that with a little `ifelse()`.
 
 ``` r
 baseball %>% 
@@ -237,9 +237,7 @@ We can get the 3.5 value with simple division.
 
     ## [1] 3.531431
 
-So it does indeed turn out that shrinking each player’s initial estimate toward the grand mean of those initial estimates does a better job of predicting their end-of-the-season batting averages than using their individual batting averages.
-
-To get a sense of what this looks like, let’s make our own version of the figure on page 121.
+So it does indeed turn out that shrinking each player’s initial estimate toward the grand mean of those initial estimates does a better job of predicting their end-of-the-season batting averages than using their individual batting averages. To get a sense of what this looks like, let’s make our own version of the figure on page 121.
 
 ``` r
 baseball %>% 
@@ -301,8 +299,6 @@ baseball %>%
     ##       <dbl>
     ## 1     0.212
 
-And if you round up, we have .212.
-
 Let’s go Bayesian
 -----------------
 
@@ -318,7 +314,7 @@ I use Bayesian multilevel models a lot in my research. The James-Stein estimator
 library(brms)
 ```
 
-I typically work with the linear regression paradigm. If we were to analyze the `baseball` with linear regression, we’d use an aggregated binomial model—which you can learn more about [here](https://www.youtube.com/watch?v=DyrUkqK9Tj4&t=1581s&frags=pl%2Cwn) or [here](https://github.com/ASKurz/Statistical_Rethinking_with_brms_ggplot2_and_the_tidyverse/blob/master/10.md). If we wanted a model that corresponded to the *y* estimates, above, we’d use `hits` as the criterion and allow each player to get their own *separate* estimate. Since we’re working within the Bayesian paradigm, we also need to assign priors. In this case, we’ll use a weakly-regularizing Normal(0, 2) on the intercepts. See [this wiki](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations) for more on weakly-regularizing priors. Here’s the model code.
+I typically work with the linear regression paradigm. If we were to analyze the `baseball` with linear regression, we’d use an aggregated binomial model—which you can learn more about [here](https://www.youtube.com/watch?v=DyrUkqK9Tj4&t=1581s&frags=pl%2Cwn) or [here](https://github.com/ASKurz/Statistical_Rethinking_with_brms_ggplot2_and_the_tidyverse/blob/master/10.md). If we wanted a model that corresponded to the *y* estimates, above, we’d use `hits` as the criterion and allow each player to get his own *separate* estimate. Since we’re working within the Bayesian paradigm, we also need to assign priors. In this case, we’ll use a weakly-regularizing Normal(0, 2) on the intercepts. See [this wiki](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations) for more on weakly-regularizing priors. Here’s the model code.
 
 ``` r
 fit_y <-
@@ -417,7 +413,7 @@ fit_z$fit
     ## and Rhat is the potential scale reduction factor on split chains (at 
     ## convergence, Rhat=1).
 
-If you’re new to aggregated binomial or logistic regression, those estimates might be confusing. For technical reasons—see [here](https://www.youtube.com/watch?v=DyrUkqK9Tj4&t=1430s&frags=pl%2Cwn)—, they’re in a log-odds metric. But we can use the `brms::inv_logit_scaled()` function to convert them back to a probability metric. *Why would we want a probability metric?*, you might ask. As it turns out, batting average is in a probability metric, too. So you might also think of the `brms::inv_logit_scaled()` as turning the model results into a batting-average metric. For example, if we wanted to bet the estimated batting average for E. Rodriguez baed on the `y_fit` model (i.e., the model corresponding to the *y* estimator), we might do something like this.
+If you’re new to aggregated binomial or logistic regression, those estimates might be confusing. For technical reasons—see [here](https://www.youtube.com/watch?v=DyrUkqK9Tj4&t=1430s&frags=pl%2Cwn)—, they’re in a log-odds metric. But we can use the `brms::inv_logit_scaled()` function to convert them back to a probability metric. *Why would we want a probability metric?*, you might ask. As it turns out, batting average is in a probability metric, too. So you might also think of the `inv_logit_scaled()` function as turning the model results into a batting-average metric. For example, if we wanted to get the estimated batting average for E. Rodriguez baed on the `y_fit` model (i.e., the model corresponding to the *y* estimator), we might do something like this.
 
 ``` r
 fixef(fit_y)["playerERodriguez", 1] %>% inv_logit_scaled()
@@ -618,6 +614,8 @@ grid.arrange(p3, p4, ncol = 2)
 ![](README_files/figure-markdown_github/unnamed-chunk-24-1.png)
 
 \[For consistency, I’ve ordered the players the same as in the previous plots.\] In both panels, we show the prediction error distribution for each player in green and summarize those distributions in terms of their means and percentile-based 95% intervals. Since these are error distributions, we prefer them to be as close to zero as possible. Although neither model made perfect predictions, the overall errors in the multilevel model were clearly smaller. Much like with the James-Stein estimator, the partial pooling of the multilevel model made for better end-of-the-season estimates.
+
+> The paradoxical \[consequence of Bayesian multilevel models\] is that \[they can contradict\] this elementary law of statistical theory. If we have \[two\] or more baseball players, and if we are interested in predicting future batting averages for each of them, then \[the Bayesian multilevel model can be better\] than simply extrapolating from the three separate averages. (p. 119)
 
 Next steps
 ----------
